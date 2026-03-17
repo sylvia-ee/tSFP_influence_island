@@ -19,14 +19,14 @@ def solve_round(round_rules, actions, action_probs, p_convince):
 
     outputs: 
     - V (function): value function caching max. win probability for a given state (trial, score, vs_left) assuming optimal action
-    - Q (function): action-value function caching best possible outcome for a given state over all possible actions
+    - Q (function): action-value function returning best possible outcome for a given state over all possible actions
     """
 
     n_trials = len(round_rules) 
 
     @lru_cache(None)
     def V(t, score, vs_left):
-        
+
         """
         description: caches the maximum win probability for a given state (trial, score, vs_left) assuming optimal action
         inputs:
