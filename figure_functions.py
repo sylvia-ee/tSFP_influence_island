@@ -1,4 +1,3 @@
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -7,13 +6,15 @@ from matplotlib.lines import Line2D
 
 def plot_policy_heatmaps(optimal_Q):
 
+    figs = []
+
     rounds = sorted(optimal_Q["round"].unique())
 
     for r in rounds:
 
         df = optimal_Q[optimal_Q["round"] == r].copy()
 
-        # pivot tbl for heatmap
+        # actions
         actions = sorted(optimal_Q["action"].unique())
         action_map = {a: i for i, a in enumerate(actions)}
         df["action_id"] = df["action"].map(action_map)
@@ -36,7 +37,7 @@ def plot_policy_heatmaps(optimal_Q):
 
         Z = pivot.values
 
-        # resize to reduce visual noise
+        # fig
         fig, ax = plt.subplots(
             figsize=(max(12, Z.shape[1]*0.35),
                      max(6, Z.shape[0]*0.12))
@@ -57,7 +58,7 @@ def plot_policy_heatmaps(optimal_Q):
             linewidth=0.4
         )
 
-        # axes
+        # ax
         ax.set_title(f"Optimal Policy (Round {r})", pad=40)
         ax.set_ylabel("Score")
         ax.set_xlabel("vs_left (nested within trial)")
@@ -71,7 +72,7 @@ def plot_policy_heatmaps(optimal_Q):
         ax.set_yticks(y_centers[::10])
         ax.set_yticklabels(scores[::10])
 
-        # group by trial
+        # trials
         n_vs = len(vs_vals)
 
         for i, t in enumerate(trials):
@@ -84,8 +85,7 @@ def plot_policy_heatmaps(optimal_Q):
 
         ax.axvline(Z.shape[1], color="black", linewidth=1.5)
 
-        # add in ranges for win and convince
-
+        # range
         for i, t in enumerate(trials):
 
             rule_row = df[df["trial"] == t].iloc[0]
@@ -98,7 +98,6 @@ def plot_policy_heatmaps(optimal_Q):
             start = i * n_vs
             end = start + n_vs
 
-            # align with grid by +0.5
             if pd.notna(win_low):
                 ax.plot([start, end], [win_low, win_low],
                         linestyle="--", color="black", linewidth=1.2)
@@ -110,16 +109,14 @@ def plot_policy_heatmaps(optimal_Q):
                         linestyle=":", color="black", linewidth=1.2)
                 ax.plot([start, end], [conv_high, conv_high],
                         linestyle=":", color="black", linewidth=1.2)
-                
-        # color bar for legend decisions
-        cbar = plt.colorbar(mesh, ax=ax, pad=0.02)
 
+        # color bar
+        cbar = plt.colorbar(mesh, ax=ax, pad=0.02)
         cbar.set_ticks(range(len(actions)))
         cbar.set_ticklabels(actions)
         cbar.set_label("Action")
 
-
-        # legend for lines
+        # legend
         legend_elements = [
             Line2D([0], [0], color='black', linestyle='--',
                    label='Win Range'),
@@ -127,14 +124,16 @@ def plot_policy_heatmaps(optimal_Q):
                    label='Convince Range')
         ]
 
-        # legend for decisions
         ax.legend(
             handles=legend_elements,
-            bbox_to_anchor=(1.18, 1),  
+            bbox_to_anchor=(1.18, 1),
             loc="upper left",
             borderaxespad=0,
             frameon=False
         )
 
-        # add whitespace on R
         plt.subplots_adjust(right=0.78, top=0.85)
+
+        figs.append(fig)
+
+    return figs
