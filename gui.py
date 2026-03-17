@@ -224,7 +224,6 @@ def plot_policy_heatmap_specific_state(optimal_Q, highlight_state=None):
             start = i * n_vs
             end = start + n_vs
 
-            # ONLY plot lower bounds
             if pd.notna(win_low):
                 ax.plot([start, end], [win_low, win_low],
                         linestyle="--", color="black", linewidth=1.5)
