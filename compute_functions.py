@@ -158,6 +158,27 @@ def build_decision_tbl(folder_path):
         full_Q["round"] = r
         optimal_Q["round"] = r
 
+        for t, rule in enumerate(rules, start=1):
+
+            win_low, win_high = rule["win"]
+
+            full_Q.loc[full_Q["trial"] == t, "win_low"] = win_low
+            full_Q.loc[full_Q["trial"] == t, "win_high"] = win_high
+
+            optimal_Q.loc[optimal_Q["trial"] == t, "win_low"] = win_low
+            optimal_Q.loc[optimal_Q["trial"] == t, "win_high"] = win_high
+
+            if rule["conv"] is not None:
+                conv_low, conv_high = rule["conv"]
+            else:
+                conv_low, conv_high = None, None
+
+            full_Q.loc[full_Q["trial"] == t, "conv_low"] = conv_low
+            full_Q.loc[full_Q["trial"] == t, "conv_high"] = conv_high
+
+            optimal_Q.loc[optimal_Q["trial"] == t, "conv_low"] = conv_low
+            optimal_Q.loc[optimal_Q["trial"] == t, "conv_high"] = conv_high
+
         all_full.append(full_Q)
         all_optimal.append(optimal_Q)
 
@@ -165,3 +186,4 @@ def build_decision_tbl(folder_path):
     optimal_Q_all = pd.concat(all_optimal, ignore_index=True)
 
     return full_Q_all, optimal_Q_all
+
