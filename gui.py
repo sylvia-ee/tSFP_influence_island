@@ -139,11 +139,24 @@ def plot_policy_heatmap_specific_state(optimal_Q, highlight_state=None):
         Z = pivot.values
 
         fig, ax = plt.subplots(
-            figsize=(max(12, Z.shape[1]*0.35),
-                     max(6, Z.shape[0]*0.12))
+            figsize=(max(15, Z.shape[1]*0.35),
+                     max(10, Z.shape[0]*0.12))
         )
 
-        cmap = ListedColormap(plt.cm.tab10.colors[:len(actions)])
+        colorblind_palette = [
+            "#0072B2",  # blue
+            "#E69F00",  # orange
+            "#009E73",  # green
+            "#D55E00",  # vermillion
+            "#CC79A7",  # purple
+            "#F0E442",  # yellow
+            "#56B4E9",  # light blue
+            "#000000"   # black
+        ]
+
+
+        cmap = ListedColormap(colorblind_palette[:len(actions)])
+
         norm = BoundaryNorm(np.arange(len(actions)+1)-0.5, cmap.N)
 
         mesh = ax.pcolormesh(
@@ -154,13 +167,13 @@ def plot_policy_heatmap_specific_state(optimal_Q, highlight_state=None):
             norm=norm,
             shading="flat",
             edgecolors="black",
-            linewidth=0.4
+            linewidth=0.3
         )
 
         # ax
-        ax.set_title(f"Optimal Policy (Round {r})", pad=40)
+        ax.set_title(f"Optimal Decision (Round {r})", pad=40)
         ax.set_ylabel("Score")
-        ax.set_xlabel("vs_left (nested within trial)")
+        ax.set_xlabel("Chocolate Left (nested within trial)")
 
         x_centers = np.arange(Z.shape[1]) + 0.5
         vs_labels = [vs for (_, vs) in col_order]
@@ -199,15 +212,15 @@ def plot_policy_heatmap_specific_state(optimal_Q, highlight_state=None):
 
             if pd.notna(win_low):
                 ax.plot([start, end], [win_low, win_low],
-                        linestyle="--", color="black", linewidth=1.2)
+                        linestyle="--", color="black", linewidth=1.5)
                 ax.plot([start, end], [win_high, win_high],
-                        linestyle="--", color="black", linewidth=1.2)
+                        linestyle="--", color="black", linewidth=1.5)
 
             if pd.notna(conv_low):
                 ax.plot([start, end], [conv_low, conv_low],
-                        linestyle=":", color="black", linewidth=1.2)
+                        linestyle=":", color="black", linewidth=2)
                 ax.plot([start, end], [conv_high, conv_high],
-                        linestyle=":", color="black", linewidth=1.2)
+                        linestyle=":", color="black", linewidth=2)
 
         # highlight new block
         if highlight_state is not None:
@@ -221,15 +234,14 @@ def plot_policy_heatmap_specific_state(optimal_Q, highlight_state=None):
                     )
                     row_idx = scores.index(s_h)
 
-                    ax.add_patch(
-                        plt.Rectangle(
-                            (col_idx, row_idx),
-                            1, 1,
-                            fill=False,
-                            edgecolor="red",
-                            linewidth=3
-                        )
-                    )
+                    # outer border
+                    ax.add_patch(plt.Rectangle((col_idx, row_idx), 1, 1,
+                                            fill=False, edgecolor="black", linewidth=4))
+
+                    # inner border
+                    ax.add_patch(plt.Rectangle((col_idx, row_idx), 1, 1,
+                                            fill=False, edgecolor="white", linewidth=2))
+
                 except ValueError:
                     pass
 

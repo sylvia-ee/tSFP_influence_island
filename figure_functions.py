@@ -58,9 +58,9 @@ def plot_policy_heatmaps(optimal_Q):
         )
 
         # ax
-        ax.set_title(f"Optimal Policy (Round {r})", pad=40)
+        ax.set_title(f"Optimal Decision (Round {r})", pad=40)
         ax.set_ylabel("Score")
-        ax.set_xlabel("vs_left (nested within trial)")
+        ax.set_xlabel("Chocolate Left (nested within trial)")
 
         x_centers = np.arange(Z.shape[1]) + 0.5
         vs_labels = [vs for (_, vs) in col_order]
