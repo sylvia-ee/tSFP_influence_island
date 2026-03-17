@@ -6,7 +6,7 @@ from matplotlib.lines import Line2D
 
 def plot_policy_heatmaps(optimal_Q):
 
-    figs = []
+    figs = {}
 
     rounds = sorted(optimal_Q["round"].unique())
 
@@ -31,22 +31,21 @@ def plot_policy_heatmaps(optimal_Q):
             index="score",
             columns=["trial", "vs_left"],
             values="action_id"
-        )
-
-        pivot = pivot.reindex(columns=pd.MultiIndex.from_tuples(col_order))
+        ).reindex(columns=pd.MultiIndex.from_tuples(col_order))
 
         Z = pivot.values
 
-        # fig
+        # figs
         fig, ax = plt.subplots(
             figsize=(max(12, Z.shape[1]*0.35),
                      max(6, Z.shape[0]*0.12))
         )
 
-        # colormap
+        # colors
         cmap = ListedColormap(plt.cm.tab10.colors[:len(actions)])
         norm = BoundaryNorm(np.arange(len(actions)+1)-0.5, cmap.N)
 
+        # heatmap
         mesh = ax.pcolormesh(
             np.arange(Z.shape[1] + 1),
             np.arange(Z.shape[0] + 1),
@@ -72,7 +71,7 @@ def plot_policy_heatmaps(optimal_Q):
         ax.set_yticks(y_centers[::10])
         ax.set_yticklabels(scores[::10])
 
-        # trials
+        # t groups
         n_vs = len(vs_vals)
 
         for i, t in enumerate(trials):
@@ -110,30 +109,27 @@ def plot_policy_heatmaps(optimal_Q):
                 ax.plot([start, end], [conv_high, conv_high],
                         linestyle=":", color="black", linewidth=1.2)
 
-        # color bar
+        # c bar
         cbar = plt.colorbar(mesh, ax=ax, pad=0.02)
         cbar.set_ticks(range(len(actions)))
         cbar.set_ticklabels(actions)
         cbar.set_label("Action")
 
-        # legend
+        # leg
         legend_elements = [
-            Line2D([0], [0], color='black', linestyle='--',
-                   label='Win Range'),
-            Line2D([0], [0], color='black', linestyle=':',
-                   label='Convince Range')
+            Line2D([0], [0], color='black', linestyle='--', label='Win Range'),
+            Line2D([0], [0], color='black', linestyle=':', label='Convince Range')
         ]
 
         ax.legend(
             handles=legend_elements,
             bbox_to_anchor=(1.18, 1),
             loc="upper left",
-            borderaxespad=0,
             frameon=False
         )
 
         plt.subplots_adjust(right=0.78, top=0.85)
 
-        figs.append(fig)
+        figs[r] = fig
 
     return figs
