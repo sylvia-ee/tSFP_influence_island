@@ -2,14 +2,21 @@
 \usepackage{amsmath, amssymb}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0.5em}
+\sloppy
 
-\title{Optimal Decision-Making for the "Influencer Island" Minigame from the Sims Freeplay}
+\title{Modeling the "Influencer Island" Mini-game from the Sims Freeplay as a Finite-Horizon Markov Decision Process}
 \author{Sylvia Ee}
 \date{March 18, 2026}
 
 \begin{document}
 
 \maketitle
+
+\section{Quick Summary}
+Influence Island is a mini-game from the Sims Freeplay that players want to win through their actions. 
+I model the mini-game as a finite-horizon Markov decision process to identify which actions maximize players' chances
+of winning, host a GUI to allow players to access these optimal actions, and collect real players' gameplay data to validate
+modeling assumptions about base probabilities and probability distributions. 
 
 \section{Background}
 
@@ -33,13 +40,234 @@ Players may win the round in two ways:
         a "convince" action appears. Players who choose the "convince" action have their current score compared to the score of the "influencee" sim (the influencee's score also falls within the convince range).
         If the player's score is equal to or greater than the influencee's, then the player wins and progresses to the next round (or stage, if this is the last round of the current stage). 
         Otherwise, they lose and are forced to restart the current stage from the first round. Alternatively, players can forgo the "convince" relationship and may choose any of the 
-        other remaining actions to increase their score. If these actions keep players within the "convince" range, players will continue to be given the "convince" option. Otherwise, only the other non-convince options will be available.
+        other remaining actions to increase their score. If these actions keep players within the "convince" range, players will continue to be given the "convince" option. 
+        Otherwise, only the other non-convince options will be available.
     \end{enumerate}
 
 A round loss occurs when players' scores exceed the upper bound of the "win" range. In this case, 
 players are forced to restart the current stage from the first round. This continues until the player successfully 
 wins the stage and progresses to the next round. 
 
+\section{Formalizing Influence Island as a Decision Process}
+
+We model the game as a finite-horizon Markov Decision Process. 
+Here, I present it in its most general form to emphasize concepts underlying the model.
+In the next section, I describe its specific implementation, as the game is given 03/16/2026. 
+
+\subsection{State Space}
+
+At any given point in the game, the primary factors determining a player's chances of winning all stages are their
+current stage, round, score, and number of remaining "chocolate" actions. The current stage and round 
+determine definitions for "win" and "convince" ranges, while score and number of remaining "chocolate" options determine 
+where the player's score is relative to those ranges and which actions are available. 
+This essentially captures "how close" you are to winning and "how you can move" to "get closer" to winning.
+
+The aggregate of these factors at each point can be thought of as a "state": 
+
+\[
+(s,r,x,c)
+\]
+where:
+\begin{itemize}
+    \item $s \in \{1,\dots,S\}$ is the current stage,
+    \item $r \in \{1,\dots,R_s\}$ is the current round within stage $s$,
+    \item $x \in \{0,\dots,X\}$ is the current score,
+    \item $c \in \{0,\dots,C\}$ is the number of remaining ``chocolate'' actions.
+\end{itemize}
+
+\subsection{Action Space}
+
+So, how can we move (i.e. how can we act) and how can we do it? Our ability to act depends on the current score ($X$) and ($C$).
+This is because the current score determines whether or not certain actions like "convince" are available, and
+the number of "chocolate" actions we have left determines whether we can take a "chocolate" action. All other
+actions ("small", "large") are possible regardless of these factors, so the ones that did depend on factors
+required representation in the state. These ideas can be stated formally!
+
+Of the set of available actions:
+\[
+\mathcal{A} = \{\text{small}, \text{large}, \text{chocolate}, \text{convince}\}
+\]
+\begin{itemize}
+    \item ``chocolate'' is available only if $c > 0$,
+    \item ``convince'' is available only if $x \in [c_{s,r}^{\min}, c_{s,r}^{\max}]$.
+\end{itemize}
+
+Each non-convince action $a \in \{\text{small}, \text{large}, \text{chocolate}\}$ produces a random increment $\Delta$ from
+the set of all possible increments $I$ for that action $a$, where:
+\[
+\Delta \in \mathcal{I}_a
+\]
+and there is some pmf describing how likely each given increment is to emerge:
+\[
+p_a(k) = \mathbb{P}(\Delta = k \mid a).
+\]
+
+\subsection{Round Structure}
+
+Now, how close are we to winning? Our "closeness" to winning depends on $S$ and $R$. This is because
+each stage and round have potentially differing definitions of what numbers make up the lower and upper bounds of
+the "win" and "convince" range. 
+
+Specifically, each round $r$ in stage $s$ is associated with:
+\begin{itemize}
+    \item a win interval $[w_{s,r}^{\min}, w_{s,r}^{\max}]$,
+    \item a convince interval $[c_{s,r}^{\min}, c_{s,r}^{\max}]$.
+\end{itemize}
+
+\subsection{Value Function}
+
+At this point, we have formalizations to define how we can move + where we need to move
+for any given point in the game (yay!). This makes it possible for us to define a function
+that looks at all these factors and tells us how likely we are to win the whole game from here on out,
+assuming we take the best action for every subsequent round! See:
+
+\[
+V(s,r,x,c)
+\]
+as returning the maximum probability of eventually winning all stages starting from state $(s,r,x,c)$. This function
+is the definitional basis for how we'll decide which action is the best to take
+at any given point. 
+
+\subsection{Transition Dynamics}
+
+Since our likelihood of winning at any given point is defined by us taking the best action at future stages,
+we need a way to describe how we transition from one state to another given every possible future action
+and consequent state. This way, we can compute likelihood as defined above!
+
+\subsubsection{Increment Actions}
+
+One way we can move between states is by incrementing the score with our actions. Specifically,
+with $a \in \{\text{small}, \text{large}, \text{chocolate}\}$, we can talk about our score
+$x'$ in the next state as the score in the preceding state $x$ plus the increment $\Delta$ produced by the action $a$:
+\[
+x' = x + \Delta,
+\]
+and the amount of chocolate left (which will impact how we can move towards future states) as:
+\[
+c' =
+\begin{cases}
+c - 1 & \text{if } a = \text{chocolate}, \\
+c & \text{otherwise}.
+\end{cases}
+\]
+
+If we:
+\begin{itemize}
+    \item \textbf{lose}, then we move back to a state where we are on round 1, 
+    have a score of 0, and have the max. number of chocolates available again. 
+    \[
+    x' > w_{s,r}^{\max}
+    \;\Rightarrow\;
+    (s,r,x,c) \to (s,1,0,C)
+    \]
+
+    \item \textbf{win}, then that means our score was within the win range, 
+    and we either move to the next round of that stage, where our score is set to 0, and our number of
+    chocolates carry over, or, if it is the last round, we move to the next stage, where
+    our score is set back to 0 for round 1, and our chocolates are reset to the amount allocated to each stage.
+    \[
+    x' \in [w_{s,r}^{\min}, w_{s,r}^{\max}]
+    \;\Rightarrow\;
+    \begin{cases}
+    (s,r+1,0,c') & r < R_s, \\
+    (s+1,1,0,C) & r = R_s
+    \end{cases}
+    \]
+
+    \item \textbf{don't win or lose}, then we simply update the score and number of chocolates remaining, since
+    we haven't completed the round. 
+    \[
+    \text{otherwise} \;\Rightarrow\; (s,r,x',c')
+    \]
+\end{itemize}
+
+\subsubsection{Convince Action}
+
+If your score falls within the convince range $x \in [c_{s,r}^{\min}, c_{s,r}^{\max}]$, 
+your probability of winning is (probably) some kind of conditional on your current score, 
+your stage, and the round, since each comes with different definitional ranges. e.g. if the range of 
+difference between your score and the upper bound of convince is smaller, there are less
+opportunities for you to "lose", if the win condition for convince is that you simply score above some
+randomly generated score within the convince range by your influencee. 
+
+\[
+P_{\text{win}}(x) = \mathbb{P}(\text{win} \mid x, s, r).
+\]
+
+The states then become:
+\begin{itemize}
+    \item \textbf{Success:}
+    \[
+    \to
+    \begin{cases}
+    (s,r+1,0,c) & r < R_s, \\
+    (s+1,1,0,C) & r = R_s
+    \end{cases}
+    \]
+
+    \item \textbf{Failure:}
+    \[
+    \to (s,1,0,C)
+    \]
+\end{itemize}
+
+\subsection{Bellman}
+
+Our states, our transitions between them, and our likelihoods are now defined! 
+Now, let's specify how each action on each state should be evaluated to determine 
+which is best. 
+
+$Q$ is something like "if I take action a at this state s, what is my chance of eventually winning?"
+$\max Q$ is something like "the chance of winning if i select the best action a at this state x"
+$V$, the likelihood of winning eventually if you select the best action a at this stage x, 
+is exactly this $\max Q$. 
+
+\[
+V(s,r,x,c) = \max_{a \in \mathcal{A}(s,r,x,c)} Q(s,r,x,c,a).
+\]
+
+So, how do we calculate Q?
+
+For non-convince actions where we increment, we consider, for every action a, every possible
+score increment increase k that this action can produce from that state. 
+Then, for each k, we compute the value of the next state 
+that results. We multiply that value by the probability k occurs,
+and add these up over all possible k for that state. 
+
+\[
+Q(s,r,x,c,a)
+=
+\sum_{k \in \mathcal{I}_a} p_a(k)\, V(s',r',x+k,c'),
+\]
+
+For the convince action, we multiply the probability of successful convincing given
+the current score by the value of the next state (contribution of successes), and then add 
+it to the probability of unsuccessful convincing multiplied by the value of the next state (where
+you return to the start of the stage). This is essentially an average of the contribution
+of successes and failures, given that the only two possible next states are success and failures. 
+
+\[
+Q(s,r,x,c,\text{convince})
+=
+P_{\text{win}}(x)\cdot V(\text{advance})
++
+(1 - P_{\text{win}}(x))\cdot V(s,1,0,c).
+\]
+
+\subsection{Ultimate End State}
+
+Let $S$ denote the final stage.
+\[
+V(S, R_S + 1, 0, c) = 1.
+\]
+
+\subsection{Optimal Policy}
+
+\[
+\pi^*(s,r,x,c)
+=
+\arg\max_{a \in \mathcal{A}} Q(s,r,x,c,a).
+\]
 
 \end{document}
 
