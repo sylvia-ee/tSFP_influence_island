@@ -41,13 +41,13 @@ full_Q = pd.read_csv(
 
 # input
 
-rounds = sorted(optimal_Q["round"].unique())
-round_num = st.selectbox("Round", rounds)
+stages = sorted(optimal_Q["round"].unique())
+stage = st.selectbox("Stage", stages)
 
-trials = sorted(
-    optimal_Q[optimal_Q["round"] == round_num]["trial"].unique()
+rounds = sorted(
+    optimal_Q[optimal_Q["round"] == stage]["trial"].unique()
 )
-trial = st.selectbox("Trial", trials)
+round_num = st.selectbox("Round", rounds)
 
 vs_vals = sorted(optimal_Q["vs_left"].unique())
 default_vs = 3 if 3 in vs_vals else vs_vals[0]
@@ -62,8 +62,8 @@ vs_left = st.selectbox(
 score_input = st.number_input("Score", step=1)
 
 valid_scores = optimal_Q[
-    (optimal_Q["round"] == round_num) &
-    (optimal_Q["trial"] == trial) &
+    (optimal_Q["round"] == stage) &
+    (optimal_Q["trial"] == round_num) &
     (optimal_Q["vs_left"] == vs_left)
 ]["score"].unique()
 
@@ -80,8 +80,8 @@ score = int(score_input)
 # lookup
 
 mask = (
-    (optimal_Q["round"] == round_num) &
-    (optimal_Q["trial"] == trial) &
+    (optimal_Q["round"] == stage) &
+    (optimal_Q["trial"] == round_num) &
     (optimal_Q["score"] == score) &
     (optimal_Q["vs_left"] == vs_left)
 )
@@ -93,8 +93,8 @@ if not mask.any():
 opt_row = optimal_Q[mask].iloc[0]
 
 df = full_Q[
-    (full_Q["round"] == round_num) &
-    (full_Q["trial"] == trial) &
+    (full_Q["round"] == stage) &
+    (full_Q["trial"] == round_num) &
     (full_Q["score"] == score) &
     (full_Q["vs_left"] == vs_left)
 ].copy()
@@ -131,13 +131,13 @@ def plot_policy_heatmap_specific_state(optimal_Q, highlight_state=None):
 
     figs = {}
 
-    rounds = sorted(optimal_Q["round"].unique())
+    stages = sorted(optimal_Q["round"].unique())
 
-    for r in rounds:
+    for r in stages:
 
         df = optimal_Q[optimal_Q["round"] == r].copy()
 
-        actions = sorted(optimal_Q["action"].unique())
+        actions = sorted(df["action"].unique())
         action_labels = [action_label_map.get(a, a) for a in actions]
 
         action_map = {a: i for i, a in enumerate(actions)}
@@ -146,10 +146,10 @@ def plot_policy_heatmap_specific_state(optimal_Q, highlight_state=None):
         df = df.sort_values(["trial", "vs_left", "score"])
 
         scores = sorted(df["score"].unique())
-        trials = sorted(df["trial"].unique())
+        rounds = sorted(df["trial"].unique())
         vs_vals = sorted(df["vs_left"].unique())
 
-        col_order = [(t, vs) for t in trials for vs in vs_vals]
+        col_order = [(t, vs) for t in rounds for vs in vs_vals]
 
         pivot = df.pivot(
             index="score",
@@ -189,9 +189,9 @@ def plot_policy_heatmap_specific_state(optimal_Q, highlight_state=None):
             linewidth=0.3
         )
 
-        ax.set_title(f"Optimal Decision (Round {r})", pad=40)
-        ax.set_ylabel("Score")
-        ax.set_xlabel("Chocolate Left (nested within trial)")
+        ax.set_title(f"Optimal Decision (Stage {r})", pad=40, fontsize=30)
+        ax.set_ylabel("Score", fontsize=30)
+        ax.set_xlabel("Chocolate Left (nested within round)", fontsize=30)
 
         x_centers = np.arange(Z.shape[1]) + 0.5
         vs_labels = [vs for (_, vs) in col_order]
@@ -204,17 +204,17 @@ def plot_policy_heatmap_specific_state(optimal_Q, highlight_state=None):
 
         n_vs = len(vs_vals)
 
-        for i, t in enumerate(trials):
+        for i, t in enumerate(rounds):
             start = i * n_vs
             ax.axvline(start, color="black", linewidth=1.5)
 
             center = start + n_vs / 2
-            ax.text(center, Z.shape[0] + 1.5, f"T{t}",
-                    ha="center", va="bottom", fontsize=10)
+            ax.text(center, Z.shape[0] + 1.5, f"R{t}",
+                    ha="center", va="bottom", fontsize=30)
 
         ax.axvline(Z.shape[1], color="black", linewidth=1.5)
 
-        for i, t in enumerate(trials):
+        for i, t in enumerate(rounds):
 
             rule_row = df[df["trial"] == t].iloc[0]
 
@@ -238,7 +238,7 @@ def plot_policy_heatmap_specific_state(optimal_Q, highlight_state=None):
             if r_h == r:
                 try:
                     col_idx = (
-                        trials.index(t_h) * len(vs_vals)
+                        rounds.index(t_h) * len(vs_vals)
                         + vs_vals.index(vs_h)
                     )
                     row_idx = scores.index(s_h)
@@ -277,8 +277,8 @@ def plot_policy_heatmap_specific_state(optimal_Q, highlight_state=None):
 
 figs = plot_policy_heatmap_specific_state(
     optimal_Q,
-    highlight_state=(round_num, trial, score, vs_left)
+    highlight_state=(stage, round_num, score, vs_left)
 )
 
 st.subheader("Decision Map")
-st.pyplot(figs[round_num])
+st.pyplot(figs[stage])

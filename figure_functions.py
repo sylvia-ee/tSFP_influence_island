@@ -76,7 +76,7 @@ def plot_policy_heatmaps(optimal_Q):
             linewidth=0.45
         )
 
-        ax.set_title(f"Optimal Decision (Round {r})", pad=40)
+        ax.set_title(f"Optimal Decision (Stage {r})", pad=40)
         ax.set_ylabel("Score")
         ax.set_xlabel("Chocolate Left (nested within trial)")
 
@@ -96,7 +96,7 @@ def plot_policy_heatmaps(optimal_Q):
             ax.axvline(start, color="black", linewidth=2, zorder=5)
 
             center = start + n_vs / 2
-            ax.text(center, Z.shape[0] + 1.5, f"T{t}",
+            ax.text(center, Z.shape[0] + 1.5, f"R{t}",
                     ha="center", va="bottom", fontsize=10)
 
         ax.axvline(Z.shape[1], color="black", linewidth=2.5, zorder=5)
