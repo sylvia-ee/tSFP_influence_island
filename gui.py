@@ -4,14 +4,21 @@ import os
 
 from figure_functions import plot_policy_heatmaps
 
+
 BASE_PATH = "data"
 st.title("Influencer Island Decision Helper")
 
-action_label_map = {
-    "very_small": "chocolate [2-9]",
-    "small": "small [1-20]",
-    "large": "large [20-45]"
-}
+col1, col2 = st.columns(2)
+
+with col1:
+    color_mode = st.selectbox(
+        "Color Mode",
+        ["default", "colorblind"]
+    )
+
+with col2:
+    theme = st.get_option("theme.base")  # "light" or "dark"
+
 
 dataset_options = [
     d for d in os.listdir(BASE_PATH)
@@ -29,18 +36,29 @@ full_Q = pd.read_csv(
     os.path.join(dataset_path, "tables", "full_Q_table.csv")
 )
 
+
+col1, col2, col3, col4 = st.columns(4)
+
 stages = sorted(optimal_Q["round"].unique())
-stage = st.selectbox("Stage", stages)
+
+with col1:
+    stage = st.selectbox("Stage", stages)
 
 rounds = sorted(
     optimal_Q[optimal_Q["round"] == stage]["trial"].unique()
 )
-round_num = st.selectbox("Round", rounds)
+
+with col2:
+    round_num = st.selectbox("Round", rounds)
 
 vs_vals = sorted(optimal_Q["vs_left"].unique())
-vs_left = st.selectbox("Chocolate Left", vs_vals)
 
-score = int(st.number_input("Score", step=1))
+with col3:
+    vs_left = st.selectbox("Chocolate Left", vs_vals)
+
+with col4:
+    score = int(st.number_input("Score", step=1))
+
 
 mask = (
     (optimal_Q["round"] == stage) &
@@ -52,6 +70,13 @@ mask = (
 if not mask.any():
     st.error("Invalid state")
     st.stop()
+
+
+action_label_map = {
+    "very_small": "chocolate [2-9]",
+    "small": "small [1-20]",
+    "large": "large [20-45]"
+}
 
 opt_row = optimal_Q[mask].iloc[0]
 
@@ -70,16 +95,14 @@ best_prob = opt_row["win_probability"]
 df["action_display"] = df["action"].map(action_label_map)
 
 
+# gui interface
 
 st.subheader("Recommendation")
 st.success(f"Best action: {action_label_map.get(best_action, best_action)}")
 st.write(f"Win probability: {best_prob:.4f}")
 
+
 st.subheader("Decision Map")
-color_mode = st.selectbox(
-    "Color Mode",
-    ["default", "colorblind"]
-)
 
 figs = plot_policy_heatmaps(
     optimal_Q,
@@ -87,10 +110,8 @@ figs = plot_policy_heatmaps(
     highlight_state=(stage, round_num, score, vs_left),
     figsize_scale=1.4,
     font_scale=1.4,
-    color_mode=color_mode
+    color_mode=color_mode,
+    theme=theme
 )
 
-
-
 st.pyplot(figs[stage])
-

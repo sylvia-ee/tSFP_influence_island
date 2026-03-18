@@ -69,7 +69,8 @@ def plot_policy_heatmaps(
     highlight_state=None,
     figsize_scale=1.0,
     font_scale=1.0,
-    color_mode="default"
+    color_mode="default",
+    theme="light"
 ):
 
     figs = {}
