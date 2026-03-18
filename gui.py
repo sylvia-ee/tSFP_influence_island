@@ -5,12 +5,10 @@ import os
 from figure_functions import plot_policy_heatmaps
 
 
-
 st.set_page_config(layout="wide")
 
 st.title("Influencer Island Decision Helper")
 
-# reduce vertical pad
 st.markdown(
     """
     <style>
@@ -23,20 +21,16 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-
 BASE_PATH = "data"
 
 
 # interface
-
 left_col, right_col = st.columns([3.5, 4.5])
 
 
 # left panel
-
 with left_col:
 
-    # contorls
     col1, col2 = st.columns(2)
 
     dataset_options = [
@@ -55,7 +49,6 @@ with left_col:
 
     theme = st.get_option("theme.base")
 
-    # load
     dataset_path = os.path.join(BASE_PATH, dataset)
 
     optimal_Q = pd.read_csv(
@@ -75,7 +68,15 @@ with left_col:
     round_num = st.selectbox("Round", rounds)
 
     vs_vals = sorted(optimal_Q["vs_left"].unique())
-    vs_left = st.selectbox("Chocolate Left", vs_vals)
+
+    # FIX: default chocolate = 3 if available
+    default_vs = 3 if 3 in vs_vals else vs_vals[0]
+
+    vs_left = st.selectbox(
+        "Chocolate Left",
+        vs_vals,
+        index=vs_vals.index(default_vs)
+    )
 
     score = int(st.number_input("Score", step=1))
 
@@ -110,14 +111,12 @@ with left_col:
     best_action = opt_row["action"]
     best_prob = opt_row["win_probability"]
 
-    # out
     st.subheader("Recommendation")
     st.success(f"{action_label_map.get(best_action, best_action)}")
     st.write(f"Win probability: {best_prob:.4f}")
 
 
 # right panel
-
 with right_col:
 
     figs = plot_policy_heatmaps(
